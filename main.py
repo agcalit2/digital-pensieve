@@ -1,3 +1,4 @@
+import time
 import os
 import pickle
 from mcp.server.fastmcp import FastMCP
@@ -15,19 +16,22 @@ if os.path.exists("pensieve_memories.pkl"):
 else:
     memories = {}
     topics = {}
+unsaved_memory_count = 0
 
 # Some hyperparameters
 MAX_MEMORIES = 10
 MAX_TOPICS = 2
+MAX_UNSAVED_MEMORIES = 5
 
+# implementing the resources and tools
 @mcp.tool()
-def write_memory(title : str, time: int, text: str, extracted_topics: list[str]):
+def write_memory(title : str, time_delta: int, text: str, extracted_topics: list[str]):
     """
     Write a memory to the Pensieve.
 
     Args:
         title (str): The title of the memory.
-        time (int): The time of the memory.
+        time_delta (int): The time delta (in seconds) before the current time.
         text (str): The text of the memory.
         extracted_topics (list[str]): Improtant people, places, or topics in the memory.
 
@@ -35,7 +39,9 @@ def write_memory(title : str, time: int, text: str, extracted_topics: list[str])
         str: Id of the generated memory
 
     """
-    memory = Memory(title, time, text, extracted_topics)
+    global unsaved_memory_count
+    timestamp = time.time() - time_delta
+    memory = Memory(title, timestamp, text, extracted_topics, time.time())
     memories[memory.id] = memory
 
     for topic_name in memory.topics: # Renamed loop variable for clarity
@@ -45,20 +51,32 @@ def write_memory(title : str, time: int, text: str, extracted_topics: list[str])
         # Use the add_memory method of the Topic object
         topics[topic_lower].add_memory(memory.id)
 
-    return f"Memory written successfully with {memory.id}."
+    # unsaved_memory_count += 1
+    crystallize_msg = ""
+    # if unsaved_memory_count >= MAX_UNSAVED_MEMORIES:
+        # crystalize_memories()
+        # unsaved_memory_count = 0
+        # crystallize_msg = " All memories crystalized successfully."
+
+    return f"Memory written successfully with {memory.id}." + crystallize_msg
 
 @mcp.tool()
 def crystalize_memories():
     """
-    Crystalizes the memories in the Pensieve into a serialized file.
+    Crystalizes the memories in the Pensieve into a serialized file (pensieve_memories.pkl).
     
     Returns:
-        str: A message indicating the success of the operation.
+        str: A message indicating the success of the operation and the path to the file.
     """
+    file_path = "pensieve_memories.pkl"
+    absolute_path = os.path.abspath(file_path)
     # Serialize memories and topics to a file
-    with open("pensieve_memories.pkl", "wb") as f:
-        pickle.dump({"memories": memories, "topics": topics}, f)
-    return "Memories crystalized successfully."
+    try:
+        with open(file_path, "wb") as f:
+            pickle.dump({"memories": memories, "topics": topics}, f)
+        return f"Memories crystalized successfully to {absolute_path}"
+    except Exception as e:
+        return f"Error crystalizing memories: {e}"
 
 @mcp.tool()
 def clear_memories():

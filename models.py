@@ -1,3 +1,4 @@
+import time as record
 import uuid
 from sentence_transformers import SentenceTransformer # Added import
 
@@ -5,10 +6,11 @@ qa_model = SentenceTransformer('multi-qa-mpnet-base-cos-v1')
 similarity_model = SentenceTransformer("all-MiniLM-L6-v2")
 
 class Memory:
-    def __init__(self, title: str, time: int, text: str, topics: list[str]):
+    def __init__(self, title: str, time: int, text: str, topics: list[str], insert_time):
         self.id = id(uuid.uuid4())
         self.title = title
         self.time = time
+        self.insert_time = insert_time
         self.text = text
         self.topics = topics
         # Generate and store the title embedding
@@ -19,6 +21,7 @@ class Memory:
             "id": self.id,
             "title": self.title,
             "time": self.time,
+            "insert_time": self.insert_time,
             "text": self.text,
             "topics": self.topics,
         }
