@@ -4,6 +4,7 @@ import wave
 import os
 import threading
 import sys
+import pyperclip
 
 # Recording parameters
 CHUNK = 1024
@@ -93,7 +94,9 @@ try:
         my_text = r.recognize_google(audio_data)
         my_text = my_text.lower()
 
-        print(f"Write the Following Memory w/ Punctuation & Typo Adjustments. Try to use existing memories to guess the names of the people in the memory. Make sure you review any name guesses with me before writing the memory and feel free to ask me about any people that you would want a name for. Memory: {my_text}")
+        claude_prompt = f"Write the Following Memory w/ Punctuation & Typo Adjustments. Try to use existing memories to guess the names of the people in the memory. Make sure you review any name guesses with me before writing the memory and feel free to ask me about any people that you would want a name for. Memory: {my_text}"
+        pyperclip.copy(claude_prompt) # Copy the prompt to clipboard
+        print(claude_prompt) # Print the prompt for user reference
 
 except sr.RequestError as e:
     print(f"Could not request results from Google Speech Recognition service; {e}")

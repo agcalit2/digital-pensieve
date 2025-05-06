@@ -1,5 +1,6 @@
 import time
 import os
+import threading
 import pickle
 from mcp.server.fastmcp import FastMCP
 from models import similarity_model, qa_model, Memory, Topic
@@ -16,12 +17,15 @@ if os.path.exists("pensieve_memories.pkl"):
 else:
     memories = {}
     topics = {}
-unsaved_memory_count = 0
 
 # Some hyperparameters
 MAX_MEMORIES = 10
 MAX_TOPICS = 2
 MAX_UNSAVED_MEMORIES = 5
+CRYSTALLIZE_INTERVAL = 60  # Seconds (1 minute)
+
+# Flag to control the periodic crystallization
+stop_periodic_crystallize = threading.Event()
 
 # implementing the resources and tools
 @mcp.tool()
@@ -39,7 +43,6 @@ def write_memory(title : str, time_delta: int, text: str, extracted_topics: list
         str: Id of the generated memory
 
     """
-    global unsaved_memory_count
     timestamp = time.time() - time_delta
     memory = Memory(title, timestamp, text, extracted_topics, time.time())
     memories[memory.id] = memory
@@ -51,14 +54,7 @@ def write_memory(title : str, time_delta: int, text: str, extracted_topics: list
         # Use the add_memory method of the Topic object
         topics[topic_lower].add_memory(memory.id)
 
-    # unsaved_memory_count += 1
-    crystallize_msg = ""
-    # if unsaved_memory_count >= MAX_UNSAVED_MEMORIES:
-        # crystalize_memories()
-        # unsaved_memory_count = 0
-        # crystallize_msg = " All memories crystalized successfully."
-
-    return f"Memory written successfully with {memory.id}." + crystallize_msg
+    return f"Memory written successfully with {memory.id}."
 
 @mcp.tool()
 def crystalize_memories():
@@ -134,6 +130,14 @@ def get_topic_timeline(topic: str):
             retrieved_memories.extend(topic_memories)
     retrieved_memories = sorted(retrieved_memories, key=lambda m: m.time)  # Sort by time
     return [m.dictionary() for m in retrieved_memories]
+
+def periodic_crystallize_task():
+    """
+    Periodically calls crystalize_memories.
+    """
+    while not stop_periodic_crystallize.is_set():
+        crystalize_memories()
+        stop_periodic_crystallize.wait(CRYSTALLIZE_INTERVAL)
 
 def get_similar_topics(topic: str):
     if not topics:
