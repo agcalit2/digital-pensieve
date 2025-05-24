@@ -29,6 +29,44 @@ stop_periodic_crystallize = threading.Event()
 
 # implementing the resources and tools
 @mcp.tool()
+def delete_memory(memory_id: int):
+    """
+    Delete a memory from the Pensieve by its ID.
+    
+    Args:
+        memory_id (str): The ID of the memory to delete.
+    
+    Returns:
+        str: A message indicating the success or failure of the operation.
+    """
+    global topics
+    if memory_id in memories:
+        del memories[memory_id]
+        for topic in topics.values():
+            topic.memories.remove(memory_id)
+        topics = {name: topics[name] for name in topics if topics[name].memories}  # Remove empty topics
+        return f"Memory with ID {memory_id} deleted successfully."
+    else:
+        return f"Memory with ID {memory_id} not found."
+    
+@mcp.tool()
+def update_memory(memory_id: int, title: str, time_delta: int, text: str, extracted_topics: list[str]):
+    """
+    Update an existing memory in the Pensieve.
+
+    Args:
+        memory_id (str): The ID of the memory to update.
+        title (str): The new title of the memory.
+        time_delta (int): The time delta (in seconds) before the current time.
+        text (str): The new text of the memory.
+        extracted_topics (list[str]): The new important people, places, or topics in the memory.
+    Returns:
+        str: A message indicating the success or failure of the operation.
+    """
+    delete_memory(memory_id)  # Delete the existing memory
+    return write_memory(title, time_delta, text, extracted_topics)  # Write the new memory
+
+@mcp.tool()
 def write_memory(title : str, time_delta: int, text: str, extracted_topics: list[str]):
     """
     Write a memory to the Pensieve.
@@ -41,7 +79,6 @@ def write_memory(title : str, time_delta: int, text: str, extracted_topics: list
 
     Returns:
         str: Id of the generated memory
-
     """
     timestamp = time.time() - time_delta
     memory = Memory(title, timestamp, text, extracted_topics, time.time())
@@ -95,7 +132,7 @@ def get_memories(query: str):
     Args:
         query (str): The query to search for.
     Returns:
-        list: A list of memories relevant to the query.
+        list: A list of memories relevant to the query, with more relevant memories appearing first.
     """
     all_memories = memories.values()
     query_embedding = qa_model.encode(query)
