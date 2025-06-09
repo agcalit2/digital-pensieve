@@ -209,3 +209,7 @@ def get_all_memory():
         "memories": [m.title for m in memories.values()],
         "topics": [topic.name for topic in topics.values()]
     }
+
+
+if __name__ == "__main__":
+    mcp.run()
